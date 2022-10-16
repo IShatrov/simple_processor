@@ -1,0 +1,97 @@
+in  ;solves ax^2 + bx + c = 0
+pop rax  ;a
+in
+pop rbx  ;b
+in
+pop rcx  ;c
+push rax sfsf
+push 0
+jne aNotZero
+push rbx
+push 0
+jne bNotZero
+push rcx
+push 0
+jne cNotZero
+push 1 ;three 1`s to mark inf roots ~~~ push 10 ;sdsd sdsdsd
+dup
+dup
+out
+out
+out
+halt
+cNotZero:
+push 0 ;three zeroes to mark inf roots
+dup
+dup
+out
+out
+out
+halt
+bNotZero:
+push rcx
+push -1
+mul
+push rbx
+div
+out
+halt
+aNotZero:
+push rbx
+dup
+mul
+push -4
+push rax
+push rcx
+mul
+mul
+add
+pop rdx
+push rdx
+push 0
+jae dNotNegative
+push 0  ;three zeroes to mark no roots
+dup
+dup
+out
+out
+out
+halt
+dNotNegative:
+push rdx
+push 0
+jne dNotZero
+push rbx
+push -1
+mul
+push rax
+push 2
+mul
+div
+out
+halt
+dNotZero:
+push rbx
+push -1
+mul
+pop [1]
+push rax
+push 2
+mul
+pop [2]
+push rdx
+sqr
+pop rdx
+push [1]
+push rdx
+add
+push [2]
+div
+push [1]
+push rdx
+sub
+push [2]
+div
+out
+out
+halt 

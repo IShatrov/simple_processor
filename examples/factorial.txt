@@ -1,0 +1,16 @@
+in	;get factorial of positive integer
+call factorial
+out
+halt
+factorial:
+dup
+push 1
+je one
+dup
+push 1
+sub
+call factorial
+mul
+ret
+one:
+ret
