@@ -4,7 +4,7 @@ in
 pop rbx  ;b
 in
 pop rcx  ;c
-push rax sfsf
+push rax
 push 0
 jne aNotZero
 push rbx
