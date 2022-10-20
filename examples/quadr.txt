@@ -13,7 +13,7 @@ jne bNotZero
 push rcx
 push 0
 jne cNotZero
-push 1 ;three 1`s to mark inf roots ~~~ push 10 ;sdsd sdsdsd
+push 1 ;three 1`s to mark inf roots
 dup
 dup
 out
