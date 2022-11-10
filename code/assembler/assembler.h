@@ -13,16 +13,6 @@
 #define MAX_CMD_LEN 101
 #define MAX_LBL_N 20
 
-#define DEF_CMD(name, num, has_arg, ...) \
-CMD_##name = num,                        \
-
-enum commands
-{
-    #include "../commands.h"
-};
-
-#undef DEF_CMD
-
 struct label
 {
     ssize_t address;
@@ -85,6 +75,6 @@ int find_label(s_lbl *labels, const char* name);
 //! @param[in] machine_code Double array.
 //! @param[in] cells_filled Amount of cells filled in code array.
 //! @brief Gets argument for some commands
-void get_arg(int num, char *text, s_lbl *labels, double *machine_code, int cells_filled);
+void get_arg(int num, char *text, s_lbl *labels, double *machine_code, ssize_t *cells_filled);
 
 #endif

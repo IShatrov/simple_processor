@@ -3,54 +3,62 @@ DEF_CMD(HALT, 0, 0,
     ip = max_ip;
 })
 
-DEF_CMD(PUSH, 1, 1,
+DEF_CMD(push, 1, 1,
 {
-    if(*((int*)(code + ip) + 1) == N_IMMED)//immediate argument
+    if((*((int*)(code + ip) + 1) & N_REG) && (*((int*)(code + ip) + 1) & N_RAM))
     {
-        stk_push(&stk, code[++ip]);
+        PUSH(RAM[(int)regs[(int)code[++ip]] + (int)code[++ip]]);
+    }
+    else if(*((int*)(code + ip) + 1) == N_IMMED)//immediate argument
+    {
+        PUSH(code[++ip]);
     }
     else if(*((int*)(code + ip) + 1) == N_RAM)//RAM
     {
-        stk_push(&stk, RAM[(int)code[++ip]]);
+        PUSH(RAM[(int)code[++ip]]);
     }
     else if(*((int*)(code + ip) + 1) == N_REG)//register
     {
-        stk_push(&stk, regs[(int)code[++ip]]);
+        PUSH(regs[(int)code[++ip]]);
     }
 })
 
-DEF_CMD(POP, 2, 1,
+DEF_CMD(pop, 2, 1,
 {
-    if(*((int*)(code + ip) + 1) == N_RAM)//RAM
+    if((*((int*)(code + ip) + 1) & N_REG) && (*((int*)(code + ip) + 1) & N_RAM))
     {
-        RAM[(int)code[++ip]] = stk_pop(&stk);
+        RAM[(int)regs[(int)code[++ip]] + (int)code[++ip]] = POP;
+    }
+    else if(*((int*)(code + ip) + 1) == N_RAM)//RAM
+    {
+        RAM[(int)code[++ip]] = POP;
     }
     else if(*((int*)(code + ip) + 1) == N_REG)//register
     {
-        regs[(int)code[++ip]] = stk_pop(&stk);
+        regs[(int)code[++ip]] = POP;
     }
 })
 
-DEF_CMD(ADD, 3, 0,
+DEF_CMD(add, 3, 0,
 {
-    stk_push(&stk, stk_pop(&stk) + stk_pop(&stk));
+    PUSH(POP + POP);
 })
 
-DEF_CMD(SUB, 4, 0,
+DEF_CMD(sub, 4, 0,
 {
-    arg = stk_pop(&stk);
-    stk_push(&stk, stk_pop(&stk) - arg);
+    arg = POP;
+    PUSH(POP - arg);
 })
 
-DEF_CMD(MUL, 5, 0,
+DEF_CMD(mul, 5, 0,
 {
-    stk_push(&stk, stk_pop(&stk) * stk_pop(&stk));
+    PUSH(POP * POP);
 })
 
-DEF_CMD(DIV, 6, 0,
+DEF_CMD(div, 6, 0,
 {
-    arg = stk_pop(&stk);
-    if(arg) stk_push(&stk, stk_pop(&stk) / arg);
+    arg = POP;
+    if(arg) PUSH(POP / arg);
     else
     {
         printf("error: zero division");
@@ -58,106 +66,106 @@ DEF_CMD(DIV, 6, 0,
     }
 })
 
-DEF_CMD(OUT, 7, 0,
+DEF_CMD(out, 7, 0,
 {
-    printf("%lf\n", stk_pop(&stk));
+    printf("%lf\n", POP);
 })
 
-DEF_CMD(IN, 8, 0,
+DEF_CMD(in, 8, 0,
 {
-    if(scanf("%lf", &arg)) stk_push(&stk, arg);
+    if(scanf("%lf", &arg)) PUSH(arg);
 })
 
-DEF_CMD(DUP, 9, 0,
+DEF_CMD(dup, 9, 0,
 {
-    arg = stk_pop(&stk);
-    stk_push(&stk, arg);
-    stk_push(&stk, arg);
+    arg = POP;
+    PUSH(arg);
+    PUSH(arg);
 })
 
-DEF_CMD(CALL, 10, 1,
+DEF_CMD(call, 10, 1,
 {
     stk_push(&ret_address_stk, ip + 2);
     ip = code[ip + 1] - 1; //for-loop will increase ip
 })
 
-DEF_CMD(RET, 11, 0,
+DEF_CMD(ret, 11, 0,
 {
     ip = stk_pop(&ret_address_stk) - 1;//for-loop will increase ip
 })
 
-DEF_CMD(SQR, 12, 0,
+DEF_CMD(sqr, 12, 0,
 {
-    stk_push(&stk, sqrt(stk_pop(&stk)));
+    PUSH(sqrt(POP));
 })
 
-DEF_CMD(JMP, 13, 1,
+DEF_CMD(jmp, 13, 1,
 {
     ip = code[ip + 1] - 1; //for-loop will increase ip
 })
 
-DEF_CMD(JB, 14, 1,
+DEF_CMD(jb, 14, 1,
 {
-    arg = stk_pop(&stk);
-    if(stk_pop(&stk) < arg)
+    arg = POP;
+    if(POP < arg)
     {
         ip = code[ip + 1] - 1; //for-loop will increase ip
     }
     else ip++;
 })
 
-DEF_CMD(JBE, 15, 1,
+DEF_CMD(jbe, 15, 1,
 {
-    arg = stk_pop(&stk);
-    if(stk_pop(&stk) <= arg)
+    arg = POP;
+    if(POP <= arg)
     {
         ip = code[ip + 1] - 1; //for-loop will increase ip
     }
     else ip++;
 })
 
-DEF_CMD(JA, 16, 1,
+DEF_CMD(ja, 16, 1,
 {
-    arg = stk_pop(&stk);
-    if(stk_pop(&stk) > arg)
+    arg = POP;
+    if(POP > arg)
     {
         ip = code[ip + 1] - 1; //for-loop will increase ip
     }
     else ip++;
 })
 
-DEF_CMD(JAE, 17, 1,
+DEF_CMD(jae, 17, 1,
 {
-    arg = stk_pop(&stk);
-    if(stk_pop(&stk) >= arg)
+    arg = POP;
+    if(POP >= arg)
     {
         ip = code[ip + 1] - 1; //for-loop will increase ip
     }
     else ip++;
 })
 
-DEF_CMD(JE, 18, 1,
+DEF_CMD(je, 18, 1,
 {
-    arg = stk_pop(&stk);
-    if(are_doubles_equal(stk_pop(&stk), arg))
+    arg = POP;
+    if(are_doubles_equal(POP, arg))
     {
         ip = code[ip + 1] - 1; //for-loop will increase ip
     }
     else ip++;
 })
 
-DEF_CMD(JNE, 19, 1,
+DEF_CMD(jne, 19, 1,
 {
-    arg = stk_pop(&stk);
+    arg = POP;
 
-    if(!are_doubles_equal(stk_pop(&stk), arg))
+    if(!are_doubles_equal(POP, arg))
     {
         ip = code[ip + 1] - 1; //for-loop will increase ip
     }
     else ip++;
 })
 
-DEF_CMD(DUMP, -1, 0,
+DEF_CMD(dump, -1, 0,
 {
     stk_dump(stk.log, &stk, stk.info.line, stk.info.file_name, stk.info.func_name, 0);
     for(int i = 0; i < max_ip; i++) printf("%-5.2lf ", code[i]);
@@ -166,7 +174,7 @@ DEF_CMD(DUMP, -1, 0,
     printf("^ ip = %d\n", ip);
 })
 
-DEF_CMD(CONT, -2, 0,
+DEF_CMD(cont, -2, 0,
 {
     ;
 })

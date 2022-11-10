@@ -5,22 +5,13 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 
 #include "../proc_constants.h"
 #include "simple_stack.h"
 
 #define EPSILON 1e-7
 #define RAM_SIZE 100
-
-#define DEF_CMD(name, num, has_arg, ...) \
-CMD_##name = num,                        \
-
-enum commands
-{
-    #include "../commands.h"
-};
-
-#undef DEF_CMD
 
 //! @param[in] n1 First number.
 //! @param[in] n2 Second number.

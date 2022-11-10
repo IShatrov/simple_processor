@@ -1,4 +1,5 @@
 #include "processor.h"
+#include "../dsl.h"
 
 #define DEF_CMD(name, num, has_arg, ...) \
 case num:                                \
@@ -24,7 +25,7 @@ void execute_code(double *code, size_t max_ip)
     STK_CTOR(&ret_address_stk, 10, stdout);
 
     double RAM[RAM_SIZE] = {0};
-    double regs[6] = {0};
+    double regs[5] = {0};
     double arg = NAN;
 
     for(; ip < max_ip; ip++)

@@ -5,7 +5,7 @@ int main(void)
     int is_error = 0;
     FILE *code_file = NULL;
 
-    if(!(code_file = fopen("out.bin", "rb")))
+    if(!(code_file = fopen("out.bin", "rb"))) //to-odo: command kine argumentts  and default name in header
     {
         printf("code file not found\n");
         is_error = 1;
@@ -19,7 +19,7 @@ int main(void)
         printf("invalid signature %x\n", *((int*)header));
         is_error = 1;
     }
-    if(*((int*)header + 2) != VERSION)
+    if(*((int*)header + 2) != VERSION)//to-do: make struct
     {
         printf("invalid version %d\n", *((int*)(header) + 2));
         is_error = 1;
@@ -41,6 +41,9 @@ int main(void)
 
 
     fclose(code_file);
+
+    getchar();
+    getchar();
 
     return 0;
 }

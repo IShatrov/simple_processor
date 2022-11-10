@@ -2,7 +2,17 @@
 #define PROC_CONSTANTS
 
 #define SIGNATURE 0xDED
-#define VERSION 2
+#define VERSION 3
+
+#define DEF_CMD(name, num, has_arg, ...) \
+CMD_##name = num,                        \
+
+enum commands
+{
+    #include "commands.h"
+};
+
+#undef DEF_CMD
 
 //enum commands
 //{
@@ -42,9 +52,9 @@ enum reg_n
 
 enum arg_types
 {
-    N_IMMED = 1,
-    N_REG   = 2,
-    N_RAM   = 3,
+    N_IMMED = 1<<0,
+    N_REG   = 1<<1,
+    N_RAM   = 1<<2,
 };
 
 #endif
