@@ -39,7 +39,7 @@ size_t count_chr_in_str(char chr, const char *str);
 //! @param[in] file File to read code from.
 //! @return Returns pointer to array of doubles.
 //! @brief Converts code from text to "machine" code.
-double* parse_code(FILE *stream, s_lbl *labels, char *text);
+double* parse_code(FILE *stream, s_lbl *labels, char *text, file_head *head);
 
 //! @param[in] str Pointer to char array.
 //! @param[in] cmd Pointer to char array.
@@ -50,18 +50,19 @@ int cmd_cmp(const char *str, const char *cmd);
 //! @param[in] code Pointer to "machine" code array.
 //! @param[in] stream File to write to.
 //! @brief Writes listing..
-void create_listing(const double *code, FILE *stream);
+void create_listing(const double *code, FILE *stream, file_head *head);
+
+//! @param[in] num Number of command.
+//! @param[in] ip Instruction pointer.
+//! @param[in] code Double array.
+//! @param[in] dest Destination file.
+//! @brief Prints command argument.
+void fprint_arg(size_t num, ssize_t *ip_ptr, const double *code, FILE *dest);
 
 //! @param[in] code Pointer to "machine" code array.
 //! @param[in] stream File to write to.
 //! @brief Writes "machine" code from code to stream as its binary representation.
-void output_bin(const double *code, FILE *stream);
-
-//! @param[in] dest Pointer to first item.
-//! @param[in] src Pointer to second item.
-//! @param[in] size Size of objects pointed to by dest and src.
-//! @brief Copies from src to dest byte by byte.
-void byte_cpy_num(void *dest, int src, size_t size);
+void output_bin(const double *code, FILE *stream, file_head *head);
 
 //! @param[in] labels Labels array.
 //! @param[in] name Name of label to find.

@@ -14,7 +14,7 @@ else if(!cmd_cmp(cmd, #name))                                       \
     if(has_arg)                                                     \
     {                                                               \
         get_arg(num, text, labels, machine_code, &cells_filled);    \
-        cells_filled++;                                              \
+        cells_filled++;                                             \
                                                                     \
         SKIP_ALL(text);                                             \
         text++;                                                     \
@@ -26,6 +26,29 @@ else if(!cmd_cmp(cmd, #name))                                       \
         text++;                                                     \
     }                                                               \
 }                                                                   \
+
+#define PRINT_REG(fmt, reg) fprintf(dest, fmt, #reg)
+
+#define CASE_PRINT_REGS(fmt)               \
+case REG_RAX:                              \
+    PRINT_REG(fmt, rax);                   \
+    break;                                 \
+case REG_RBX:                              \
+    PRINT_REG(fmt, rbx);                   \
+    break;                                 \
+case REG_RCX:                              \
+    PRINT_REG(fmt, rcx);                   \
+    break;                                 \
+case REG_RDX:                              \
+    PRINT_REG(fmt, rdx);                   \
+    break;
+
+#define REGS_TO_CODE(n_instr)                                    \
+if(!cmd_cmp(cmd, "rax")) machine_code[n_instr] = REG_RAX;        \
+else if(!cmd_cmp(cmd, "rbx")) machine_code[n_instr] = REG_RBX;   \
+else if(!cmd_cmp(cmd, "rcx")) machine_code[n_instr] = REG_RCX;   \
+else if(!cmd_cmp(cmd, "rdx")) machine_code[n_instr] = REG_RDX;   \
+else printf("syntax error: reg %5s not found\n", cmd);           \
 
 size_t get_file_size(FILE *stream)
 {
@@ -76,22 +99,25 @@ size_t count_chr_in_str(char chr, const char *str)
     return ans;
 }
 
-double* parse_code(FILE *stream, s_lbl *labels, char *text)
+double* parse_code(FILE *stream, s_lbl *labels, char *text, file_head *head)
 {
     assert(stream != NULL);
+    assert(labels);
+    assert(text);
+    assert(head);
 
     static int n_pass = 0;
 
     size_t n_lines = 1 + count_chr_in_str('\n', text); //last line does not end with \n
 
-    double *machine_code = (double*)calloc(2*n_lines + 3, sizeof(double));
-    assert(machine_code != NULL);            //there will be no more than 2*n_lines words in source code,
-                                             //and 3 more cells are required for signature, version and n_lines
-    *((int*)(machine_code)) = SIGNATURE;
-    *((int*)(machine_code + 1)) = VERSION;
-    *((int*)(machine_code + 2)) = 2;
+    double *machine_code = (double*)calloc(2*n_lines, sizeof(double));
+    assert(machine_code != NULL);
 
-    ssize_t cells_filled = 3;
+    head->sign = SIGNATURE;
+    head->ver = VERSION;
+    head->n_lines = 0;
+
+    ssize_t cells_filled = 0;
 
     char cmd[MAX_CMD_LEN] = {0};
     size_t n_labels = 0;
@@ -116,11 +142,11 @@ double* parse_code(FILE *stream, s_lbl *labels, char *text)
             int index = -1;
             if((index = find_label(labels, cmd)) >= 0)
             {
-                labels[index].address = cells_filled - 3;
+                labels[index].address = cells_filled;
             }
             else
             {
-                labels[n_labels++] = {cells_filled - 3, text};
+                labels[n_labels++] = {cells_filled, text};
             }
 
             SKIP_ALL(text);
@@ -139,12 +165,14 @@ double* parse_code(FILE *stream, s_lbl *labels, char *text)
         }
     }
 
-    *((int*)(machine_code + 2)) = cells_filled;
+    head->n_lines = cells_filled;
 
     n_pass++;
 
     return machine_code;
 }
+
+#undef DEF_CMD
 
 int cmd_cmp(const char *str, const char *cmd)
 {
@@ -167,78 +195,131 @@ int cmd_cmp(const char *str, const char *cmd)
     return tolower(*cmd) - tolower(*str);
 }
 
-void create_listing(const double *code, FILE *stream)
+#define DEF_CMD(name, num, has_arg, ...)          \
+case num:                                         \
+    if(has_arg)                                   \
+    {                                             \
+        fprintf(stream, "%d %s ", ip, #name);     \
+        fprint_arg(num, &ip, code, stream);       \
+        ip++;                                     \
+    }                                             \
+    else                                          \
+    {                                             \
+        fprintf(stream, "%d %s\n", ip, #name);    \
+    }                                             \
+    break;
+
+void create_listing(const double *code, FILE *stream, file_head *head)
 {
     assert(code);
     assert(stream);
+    assert(head);
 
-    fprintf(stream, "%d ", *((const int*)code));      //signature
-    fprintf(stream, "%d ", *((const int*)(code + 1)));//version
-    fprintf(stream, "%d\n", *((const int*)(code + 2)));//n of instructions
+    fprintf(stream, "%d ", head->sign);      //signature
+    fprintf(stream, "%d ", head->ver);//version
+    fprintf(stream, "%d\n", head->n_lines);//n of instructions
 
-    for(int i = 3; i < *((const int*)(code + 2)); i++)
+    ssize_t ip = 0;
+    ssize_t max_ip = head->n_lines;
+
+    for(; ip < max_ip; ip++)
     {
-        if(*((const int *)(code + i)) == CMD_pop || *((const int *)(code + i)) == CMD_push ||
-          *((const int *)(code + i)) >= CMD_jmp)
+        switch(*((int*)(code + ip)))
         {
-            fprintf(stream, "%4d\t%d\t%.3lf\n", i - 3, *((const int*)(code + i)), *(code + i + 1));
-            i++;
-        }
-        else
-        {
-            fprintf(stream, "%4d\t%d\n", i - 3, *((const int *)(code + i)));
+            #include "../commands.h"
+            default:
+                printf("error: command number %d not found\n", code[ip]);
+                printf("ip = %d\n", ip);
         }
     }
 
     return;
 }
 
-void output_bin(const double *code, FILE *stream)
+void fprint_arg(size_t num, ssize_t *ip_ptr, const double *code, FILE *dest)
 {
+    assert(dest);
+    assert(ip_ptr);
     assert(code);
-    assert(stream);
 
-    for(int i = 0; i < *((const int*)(code) + 4); i++) fwrite(&code[i], sizeof(double), 1, stream);
+    ssize_t ip = *ip_ptr;
+
+    switch(num)
+    {
+        case CMD_push:
+            if(CHECK_MASK(N_REG) && CHECK_MASK(N_RAM))
+            {
+                (*ip_ptr)++;
+                ip++;
+
+                switch((int)code[ip])
+                {
+                    CASE_PRINT_REGS("[%s +");
+                }
+
+                fprintf(dest, " %d]\n", (int)code[ip + 1]);
+            }
+            else if(CHECK_MASK(N_IMMED))//immediate argument
+            {
+                fprintf(dest, "%.2lf\n", code[ip + 1]);
+            }
+            else if(CHECK_MASK(N_RAM))//RAM
+            {
+                fprintf(dest, "[%d]\n", (int)code[ip + 1]);
+            }
+            else if(CHECK_MASK(N_REG))//register
+            {
+                switch((int)code[ip + 1])
+                {
+                    CASE_PRINT_REGS("%s\n");
+                }
+            }
+        break;
+
+        case CMD_pop:
+            if(CHECK_MASK(N_REG) && CHECK_MASK(N_RAM))
+            {
+                (*ip_ptr)++;
+                ip++;
+
+                switch((int)code[ip])
+                {
+                    CASE_PRINT_REGS("[%s +");
+                }
+
+                fprintf(dest, " %d]\n", (int)code[ip + 1]);
+            }
+            else if(CHECK_MASK(N_RAM))
+            {
+                fprintf(dest, "[%d]\n", (int)code[ip + 1]);
+            }
+            else if(CHECK_MASK(N_REG))
+            {
+                switch((int)code[ip + 1])
+                {
+                    CASE_PRINT_REGS("%s\n");
+                }
+            }
+            break;
+
+        default: //for jumps and call
+            fprintf(dest, "%d\n",(int)code[ip + 1]);
+    }
 
     return;
 }
 
-void byte_cpy_num(void *dest, int src, size_t size)
+#undef DEF_CMD
+
+void output_bin(const double *code, FILE *stream, file_head *head)
 {
-    assert(dest != NULL);
-    assert(size != 0);
+    assert(code);
+    assert(stream);
+    assert(head);
 
-    void *src_ptr = &src;
+    fwrite(head, sizeof(file_head), 1, stream);
 
-    while(size >= sizeof(double))
-    {
-        *((double*)dest) = *((double*)src_ptr);
-
-        dest = ((double*)dest) + 1;
-        src_ptr = ((double*)src_ptr) + 1;
-
-        size -= sizeof(double);
-    }
-
-    while(size >= sizeof(int))
-    {
-        *((int*)dest) = *((int*)src_ptr);
-
-        dest = ((int*)dest) + 1;
-        src_ptr = ((int*)src_ptr) + 1;
-
-        size -= sizeof(int);
-    }
-
-    while(size > 0)
-    {
-        *((char*)dest) = *((char*)src_ptr);
-
-        dest = ((char*)dest) + 1;
-        src_ptr = ((char*)src_ptr) + 1;
-
-        size -= 1;
-    }
+    fwrite(code, (head->n_lines)*sizeof(double), 1, stream);
 
     return;
 }
@@ -277,38 +358,30 @@ void get_arg(int num, char *text, s_lbl *labels, double *machine_code, ssize_t *
             arg = 0;
             if(sscanf(text, " [%s + %lf]", cmd, &arg) == 2)
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_REG;
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_RAM;
+                WRITE_MASK(N_REG);
+                WRITE_MASK(N_RAM);
 
-                if(!cmd_cmp(cmd, "rax")) machine_code[(*cells_filled)++] = REG_RAX;
-                else if(!cmd_cmp(cmd, "rbx")) machine_code[(*cells_filled)++] = REG_RBX;
-                else if(!cmd_cmp(cmd, "rcx")) machine_code[(*cells_filled)++] = REG_RCX;
-                else if(!cmd_cmp(cmd, "rdx")) machine_code[(*cells_filled)++] = REG_RDX;
-                else printf("syntax error: reg %5s not found\n", cmd);
+                REGS_TO_CODE((*cells_filled)++);
 
                 machine_code[*cells_filled] = arg;
             }
             else if(sscanf(text, "%lf", &arg))
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_IMMED;
+                WRITE_MASK(N_IMMED);
 
                 machine_code[*cells_filled] = arg; //immediate argument
             }
             else if(sscanf(text, " [%lf]", &arg))
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_RAM;//RAM
+                WRITE_MASK(N_RAM);//RAM
 
                 machine_code[*cells_filled] = arg;
             }
             else if(sscanf(text, "%s", cmd))
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_REG;//register
+                WRITE_MASK(N_REG);//register
 
-                if(!cmd_cmp(cmd, "rax")) machine_code[*cells_filled] = REG_RAX;
-                else if(!cmd_cmp(cmd, "rbx")) machine_code[*cells_filled] = REG_RBX; //to-do: macros
-                else if(!cmd_cmp(cmd, "rcx")) machine_code[*cells_filled] = REG_RCX;
-                else if(!cmd_cmp(cmd, "rdx")) machine_code[*cells_filled] = REG_RDX;
-                else printf("syntax error: reg %5s not found\n", cmd);
+                REGS_TO_CODE(*cells_filled);
             }
             else
             {
@@ -319,31 +392,23 @@ void get_arg(int num, char *text, s_lbl *labels, double *machine_code, ssize_t *
         case CMD_pop:
             if(sscanf(text, " [%s + %lf]", cmd, &arg) == 2)
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_REG;
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_RAM;
+                WRITE_MASK(N_REG);
+                WRITE_MASK(N_RAM);
 
-                if(!cmd_cmp(cmd, "rax")) machine_code[(*cells_filled)++] = REG_RAX;
-                else if(!cmd_cmp(cmd, "rbx")) machine_code[(*cells_filled)++] = REG_RBX;
-                else if(!cmd_cmp(cmd, "rcx")) machine_code[(*cells_filled)++] = REG_RCX;
-                else if(!cmd_cmp(cmd, "rdx")) machine_code[(*cells_filled)++] = REG_RDX;
-                else printf("syntax error: reg %5s not found\n", cmd);
+                REGS_TO_CODE((*cells_filled)++);
 
                 machine_code[*cells_filled] = arg;
             }
             else if(sscanf(text, " [%lf]", &arg))
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_RAM;//RAM
+                WRITE_MASK(N_RAM);;//RAM
                 machine_code[*cells_filled] = arg;
             }
             else if(sscanf(text, "%s", cmd))
             {
-                *((int*)(machine_code + *cells_filled - 1) + 1) |= N_REG;//register
+                WRITE_MASK(N_REG);//register
 
-                if(!cmd_cmp(cmd, "rax")) machine_code[*cells_filled] = REG_RAX;
-                else if(!cmd_cmp(cmd, "rbx")) machine_code[*cells_filled] = REG_RBX;
-                else if(!cmd_cmp(cmd, "rcx")) machine_code[*cells_filled] = REG_RCX;
-                else if(!cmd_cmp(cmd, "rdx")) machine_code[*cells_filled] = REG_RDX;
-                else printf("syntax error: reg %5s not found\n", cmd);
+                REGS_TO_CODE(*cells_filled);
             }
             else
             {

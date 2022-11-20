@@ -19,12 +19,12 @@ void execute_code(double *code, size_t max_ip)
     size_t ip = 0; //instruction pointer
 
     my_stk stk = {};
-    STK_CTOR(&stk, 10, stdout);
+    STK_CTOR(&stk, DEFAULT_STK_CAP, stdout);
 
     my_stk ret_address_stk = {};
-    STK_CTOR(&ret_address_stk, 10, stdout);
+    STK_CTOR(&ret_address_stk, DEFAULT_STK_CAP, stdout);
 
-    double RAM[RAM_SIZE] = {0};
+    double RAM[RAM_SIZE + VID_WIDTH*VID_HEIGHT + 1] = {0};
     double regs[5] = {0};
     double arg = NAN;
 

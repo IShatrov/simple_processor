@@ -11,7 +11,7 @@
 #include "simple_stack.h"
 
 #define EPSILON 1e-7
-#define RAM_SIZE 100
+const int DEFAULT_STK_CAP = 10;
 
 //! @param[in] n1 First number.
 //! @param[in] n2 Second number.

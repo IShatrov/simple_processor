@@ -4,6 +4,10 @@
 #define SIGNATURE 0xDED
 #define VERSION 3
 
+#define RAM_SIZE 100
+#define VID_WIDTH 11
+#define VID_HEIGHT 11
+
 #define DEF_CMD(name, num, has_arg, ...) \
 CMD_##name = num,                        \
 
@@ -13,6 +17,13 @@ enum commands
 };
 
 #undef DEF_CMD
+
+typedef struct
+{
+    int sign;
+    int ver;
+    int n_lines;
+} file_head;
 
 //enum commands
 //{

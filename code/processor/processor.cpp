@@ -5,29 +5,29 @@ int main(void)
     int is_error = 0;
     FILE *code_file = NULL;
 
-    if(!(code_file = fopen("out.bin", "rb"))) //to-odo: command kine argumentts  and default name in header
+    if(!(code_file = fopen("out.bin", "rb")))
     {
         printf("code file not found\n");
         is_error = 1;
     }
 
-    double header[3] = {0};
-    fread(header, 3*sizeof(double), 1, code_file);
+    file_head head = {0, 0, 0};
+    fread(&head, sizeof(file_head), 1, code_file);
 
-    if(*((int*)header) != SIGNATURE)
+    if(head.sign != SIGNATURE)
     {
-        printf("invalid signature %x\n", *((int*)header));
+        printf("invalid signature %x\n", head.sign);
         is_error = 1;
     }
-    if(*((int*)header + 2) != VERSION)//to-do: make struct
+    if(head.ver != VERSION)
     {
-        printf("invalid version %d\n", *((int*)(header) + 2));
+        printf("invalid version %d\n", head.ver);
         is_error = 1;
     }
 
     if(!is_error)
     {
-        size_t max_ip = (size_t)(*((int*)(header) + 4));
+        size_t max_ip = head.n_lines;
 
         double *code = (double*)calloc((max_ip), sizeof(double));
         assert(code);

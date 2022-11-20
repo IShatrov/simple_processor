@@ -22,17 +22,19 @@ int main(int argc, const char *argv[])
         s_lbl *labels = (s_lbl*)calloc(MAX_LBL_N, sizeof(s_lbl));
         assert(labels);
 
-        machine_code = parse_code(code, labels, text); //two passes to fill labels array
+        file_head head = {0, 0, 0};
+
+        machine_code = parse_code(code, labels, text, &head); //two passes to fill labels array
 
         //for(int i = 0; i < MAX_LBL_N; i++) printf("%d: %.10s %d\n", i, labels[i].name, labels[i].address);
 
-        machine_code = parse_code(code, labels, text);
+        machine_code = parse_code(code, labels, text, &head);
 
         //putchar('\n');
         //for(int i = 0; i < MAX_LBL_N; i++) printf("%d: %.10s %d\n", i, labels[i].name, labels[i].address);
 
-        create_listing(machine_code, listing);
-        output_bin(machine_code, bin_out);
+        create_listing(machine_code, listing, &head);
+        output_bin(machine_code, bin_out, &head);
 
         free(text);
     }

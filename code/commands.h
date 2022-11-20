@@ -5,19 +5,21 @@ DEF_CMD(HALT, 0, 0,
 
 DEF_CMD(push, 1, 1,
 {
-    if((*((int*)(code + ip) + 1) & N_REG) && (*((int*)(code + ip) + 1) & N_RAM))
+    if(CHECK_MASK(N_REG) && CHECK_MASK(N_RAM))
     {
-        PUSH(RAM[(int)regs[(int)code[++ip]] + (int)code[++ip]]);
+        PUSH(RAM[(int)regs[(int)code[ip + 1]] + (int)code[ip + 2]]);
+
+        ip += 2;
     }
-    else if(*((int*)(code + ip) + 1) == N_IMMED)//immediate argument
+    else if(CHECK_MASK(N_IMMED))//immediate argument
     {
         PUSH(code[++ip]);
     }
-    else if(*((int*)(code + ip) + 1) == N_RAM)//RAM
+    else if(CHECK_MASK(N_RAM))//RAM
     {
         PUSH(RAM[(int)code[++ip]]);
     }
-    else if(*((int*)(code + ip) + 1) == N_REG)//register
+    else if(CHECK_MASK(N_REG))//register
     {
         PUSH(regs[(int)code[++ip]]);
     }
@@ -25,15 +27,17 @@ DEF_CMD(push, 1, 1,
 
 DEF_CMD(pop, 2, 1,
 {
-    if((*((int*)(code + ip) + 1) & N_REG) && (*((int*)(code + ip) + 1) & N_RAM))
+    if(CHECK_MASK(N_REG) && CHECK_MASK(N_RAM))
     {
-        RAM[(int)regs[(int)code[++ip]] + (int)code[++ip]] = POP;
+        RAM[(int)regs[(int)code[ip + 1]] + (int)code[ip + 2]] = POP;
+
+        ip += 2;
     }
-    else if(*((int*)(code + ip) + 1) == N_RAM)//RAM
+    else if(CHECK_MASK(N_RAM))//RAM
     {
         RAM[(int)code[++ip]] = POP;
     }
-    else if(*((int*)(code + ip) + 1) == N_REG)//register
+    else if(CHECK_MASK(N_REG))//register
     {
         regs[(int)code[++ip]] = POP;
     }
@@ -101,68 +105,68 @@ DEF_CMD(sqr, 12, 0,
 
 DEF_CMD(jmp, 13, 1,
 {
-    ip = code[ip + 1] - 1; //for-loop will increase ip
+    DO_JUMP(1);
 })
 
 DEF_CMD(jb, 14, 1,
 {
     arg = POP;
-    if(POP < arg)
-    {
-        ip = code[ip + 1] - 1; //for-loop will increase ip
-    }
-    else ip++;
+    DO_JUMP(POP < arg);
 })
 
 DEF_CMD(jbe, 15, 1,
 {
     arg = POP;
-    if(POP <= arg)
-    {
-        ip = code[ip + 1] - 1; //for-loop will increase ip
-    }
-    else ip++;
+    DO_JUMP(POP <= arg);
 })
 
 DEF_CMD(ja, 16, 1,
 {
     arg = POP;
-    if(POP > arg)
-    {
-        ip = code[ip + 1] - 1; //for-loop will increase ip
-    }
-    else ip++;
+    DO_JUMP(POP > arg);
 })
 
 DEF_CMD(jae, 17, 1,
 {
     arg = POP;
-    if(POP >= arg)
-    {
-        ip = code[ip + 1] - 1; //for-loop will increase ip
-    }
-    else ip++;
+    DO_JUMP(POP >= arg);
 })
 
 DEF_CMD(je, 18, 1,
 {
     arg = POP;
-    if(are_doubles_equal(POP, arg))
-    {
-        ip = code[ip + 1] - 1; //for-loop will increase ip
-    }
-    else ip++;
+    DO_JUMP(are_doubles_equal(POP, arg));
 })
 
 DEF_CMD(jne, 19, 1,
 {
     arg = POP;
 
-    if(!are_doubles_equal(POP, arg))
+    DO_JUMP(!are_doubles_equal(POP, arg));
+})
+
+DEF_CMD(sin, 20, 0,
+{
+    PUSH(sin(POP));
+})
+
+DEF_CMD(cos, 21, 0,
+{
+    PUSH(cos(POP));
+})
+
+DEF_CMD(vid, 22, 0,
+{
+    for(int i = 0; i < VID_HEIGHT; i++)
     {
-        ip = code[ip + 1] - 1; //for-loop will increase ip
+        for(int j = 0; j < VID_WIDTH; j++)
+        {
+            if(RAM[RAM_SIZE + i*VID_HEIGHT + j + 1]) putchar('*');
+            else putchar('_');
+        }
+    putchar('\n');
     }
-    else ip++;
+    putchar('\n');
 })
 
 DEF_CMD(dump, -1, 0,
